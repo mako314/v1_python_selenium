@@ -1,0 +1,25 @@
+2025-06-17 16:49:46,799 - logger - INFO - Log created: 2025-06-17 16:49:46
+2025-06-17 16:49:46,799 - logger - DEBUG - User Search Request:
+            ├─ Query:          OpenAI
+            ├─ Result Count:   5
+            └─ Fresh Log:      True
+2025-06-17 16:49:46,800 - logger - INFO - Beginning Automated Google Search with Selenium
+2025-06-17 16:49:46,800 - logger - INFO - Launching Chrome with options:
+2025-06-17 16:49:46,800 - logger - DEBUG - User Search Request:
+            ├─ Arg 1:        --start-maximized
+            ├─ Arg 3:        --no-sandbox
+            └─ Arg 2:        --disable-blink-features=AutomationControlled
+2025-06-17 16:49:48,558 - logger - INFO - Page loaded - Title: Google, URL: https://www.google.com/
+2025-06-17 16:49:48,626 - logger - INFO - Search term "OpenAI" entered successfully
+2025-06-17 16:49:48,651 - logger - INFO - Search submitted using Enter key
+2025-06-17 16:49:48,651 - logger - INFO - Looking for search results...
+2025-06-17 16:49:49,730 - logger - INFO - Found 7 search result titles
+2025-06-17 16:49:49,887 - logger - INFO - Result 1: OpenAI | URL: https://openai.com/
+2025-06-17 16:49:49,912 - logger - INFO - Result 2. SKIPPING About - OpenAI | Element not displayed OR visible
+2025-06-17 16:49:49,924 - logger - INFO - Result 3. SKIPPING Bill Gates on OpenAI - NATURAL 20 | Element not displayed OR visible
+2025-06-17 16:49:49,949 - logger - INFO - Result 4: OpenAI | URL: https://en.wikipedia.org/wiki/OpenAI
+2025-06-17 16:49:49,979 - logger - INFO - Result 5: OpenAI | URL: https://www.linkedin.com/company/openai
+2025-06-17 16:49:50,005 - logger - INFO - Result 6: OpenAI | URL: https://www.youtube.com/OpenAI
+2025-06-17 16:49:50,029 - logger - INFO - Result 7: OpenAI (@openai) • Instagram photos and videos | URL: https://www.instagram.com/openai/?hl=en
+2025-06-17 16:49:50,030 - logger - INFO - SUCCESS exiting the program
+2025-06-17 16:49:50,090 - logger - INFO - Browser closed successfully
