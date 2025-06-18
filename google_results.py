@@ -36,12 +36,12 @@ def setup_chrome_driver():
             ├─ Arg 3:        --no-sandbox
             └─ Arg 2:        --disable-blink-features=AutomationControlled"""
     )
-
-    # chromedriver_path = get_chromedriver_path()
     
     try:
-        service = ChromeService()
+        service = ChromeService()  # Auto-find ChromeDriver
         driver = webdriver.Chrome(service=service, options=chrome_options)
+        # service = ChromeService()
+        # driver = webdriver.Chrome(service=service, options=chrome_options)
         return driver
         
     except Exception as chrome_error:
