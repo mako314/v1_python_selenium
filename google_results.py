@@ -29,14 +29,14 @@ def setup_chrome_driver():
     print(
         """Launching Chrome with options::
             ├─ Arg 1:        --start-maximized
-            ├─ Arg 3:        --no-sandbox
-            └─ Arg 2:        --disable-blink-features=AutomationControlled"""
+            ├─ Arg 2:        --no-sandbox
+            └─ Arg 3:        --disable-blink-features=AutomationControlled"""
     )
     logger.debug(
         """Launching Chrome with options::
             ├─ Arg 1:        --start-maximized
-            ├─ Arg 3:        --no-sandbox
-            └─ Arg 2:        --disable-blink-features=AutomationControlled"""
+            ├─ Arg 2:        --no-sandbox
+            └─ Arg 3:        --disable-blink-features=AutomationControlled"""
     )
     
     # Chrome service should be able to find chrome if its installed, otherwise can give it a path to use.
@@ -68,7 +68,7 @@ def go_to_next_page(driver):
             return True
         else:
             print("FAIL | Next button has no href.")
-            logger.info('FAIL | unable to navigate to NEXT PAGE via href')
+            logger.warning('FAIL | unable to navigate to NEXT PAGE via href')
             return False
 
     except (NoSuchElementException, ElementClickInterceptedException, TimeoutException) as e:
@@ -88,11 +88,11 @@ def perform_search(driver, search_term=None):
         
         print(f'Title: {title}')
         print(f'URL: {url}')
-        logger.info(f'Page loaded - Title: {title}, URL: {url}')
+        logger.info(f'Successfully loaded page - Title: {title}, URL: {url}')
         
     except WebDriverException as e:
         print(f"Failed to navigate to Google: {e}")
-        logger.error(f"Failed to navigate to Google: {e}")
+        logger.critical(f"Failed to navigate to Google: {e}")
         return False
 
     try:
@@ -111,7 +111,7 @@ def perform_search(driver, search_term=None):
         
     except TimeoutException:
         print("Search box not found - Google page structure may have changed")
-        logger.error("Search box Id (APjFqb) not found within timeout")
+        logger.warning("Search box Id (APjFqb) not found within timeout")
         return False
     except Exception as e:
         print(f"Error interacting with search box: {e}")
@@ -120,7 +120,7 @@ def perform_search(driver, search_term=None):
 
     return True
 
-def extract_search_results(driver, max_results, results_accum=None, current_page_number = 1):
+def extract_search_results(driver, max_results, results_accum=None, current_page_number=1):
     # Max_results we want from user input
     max_results = max_results or 5
     # Hold all results
@@ -197,7 +197,7 @@ def extract_search_results(driver, max_results, results_accum=None, current_page
             else:
                 print(f"Page [{current_page_number}] | Empty title found at position {i + 1}")
                 print("-" * 50)
-                logger.warning(f"Page [{current_page_number}] | Empty title found at position {i + 1}")
+                logger.info(f"Page [{current_page_number}] | Empty title found at position {i + 1}")
                 
         except NoSuchElementException:
             print(f"Page [{current_page_number}] | Could not find link for result {i + 1} - skipping")
@@ -277,6 +277,8 @@ def main():
         pages_processed = 1
 
         logger.info(" ### Successfully reached search page, now beginning title extraction ### ")
+        print(" ### Successfully reached search page, now beginning title extraction ### ")
+        print("-" * 50)
 
         # Loop until we have the desired result amount 
         while successful_results < result_count:
@@ -304,20 +306,21 @@ def main():
             if not go_to_next_page(driver):
                 print("Next page not available. Ending search.")
                 break
+        
+        if len(all_results) > 0:
 
-        print("\nSearch Results Summary:")
-        logger.info("Search Results Summary:")
+            print("\nSearch Results Summary:")
+            logger.info("Search Results Summary:")
 
-        for i, result in enumerate(all_results, start=1):
-            print(f"{i}. Title: {result['title']} | Url: {result['url']}")
-            logger.info(f"{i}. Title: {result['title']} | Url: {result['url']}")
-
+            for i, result in enumerate(all_results, start=1):
+                print(f"{i}. Title: {result['title']} | Url: {result['url']}")
+                logger.info(f"{i}. Title: {result['title']} | Url: {result['url']}")    
     
         exit_program_success()
 
     except Exception as e:
         print(f"Unexpected error occurred: {e}")
-        logger.error(f"Unexpected error occurred: {e}")
+        logger.critical(f"Unexpected error occurred: {e}")
         exit_program_fail()
     finally:
         # Ensure driver is always closed
@@ -332,13 +335,13 @@ def main():
 
 
 def exit_program_success():
-    print("\nSUCCESS exiting the program...")
-    logger.info('SUCCESS exiting the program')
+    print("\nSUCCESS | exiting the program...")
+    logger.info('SUCCESS | exiting the program')
     sys.exit(0)
 
 def exit_program_fail():
-    print("FAIL Exiting the program...")
-    logger.info('FAIL exiting the program')
+    print("FAIL | Exiting the script...")
+    logger.warning('FAIL | Exiting the script')
     sys.exit(1)   
 
 if __name__ == "__main__":
