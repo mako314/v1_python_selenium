@@ -11,7 +11,6 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-# from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException, ElementClickInterceptedException
@@ -27,18 +26,20 @@ def setup_chrome_driver():
     chrome_options.add_experimental_option('useAutomationExtension', False)
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
 
-    logger.info("Launching Chrome with options:")
-    print("Launching Chrome with options:")
-
-    logger.debug(
-        """User Search Request:
+    print(
+        """Launching Chrome with options::
             ├─ Arg 1:        --start-maximized
             ├─ Arg 3:        --no-sandbox
             └─ Arg 2:        --disable-blink-features=AutomationControlled"""
     )
-
-    # chromedriver_path = get_chromedriver_path()
+    logger.debug(
+        """Launching Chrome with options::
+            ├─ Arg 1:        --start-maximized
+            ├─ Arg 3:        --no-sandbox
+            └─ Arg 2:        --disable-blink-features=AutomationControlled"""
+    )
     
+    # Chrome service should be able to find chrome if its installed, otherwise can give it a path to use.
     try:
         service = ChromeService()
         driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -51,6 +52,8 @@ def setup_chrome_driver():
 
 def go_to_next_page(driver):
     try:
+        logger.info('Attempting to navigate to next page for more results')
+
         # <a> tag that leads to next page
         next_button = WebDriverWait(driver, 5).until(
             EC.element_to_be_clickable((By.ID, "pnnext"))
@@ -59,14 +62,18 @@ def go_to_next_page(driver):
         href = next_button.get_attribute("href")
         if href:
             driver.get(href)
-            print("Navigated to next page via href.")
+            print("\nSUCCESS | Navigated to NEXT PAGE via href.")
+            print("-" * 50)
+            logger.info('SUCCESS | Navigated to NEXT PAGE via href')
             return True
         else:
-            print("Next button has no href.")
+            print("FAIL | Next button has no href.")
+            logger.info('FAIL | unable to navigate to NEXT PAGE via href')
             return False
 
     except (NoSuchElementException, ElementClickInterceptedException, TimeoutException) as e:
-        print("Next button not found or not clickable:", str(e))
+        print(f"Next button not found or not clickable: {e}")
+        logger.warning(f'Next button not found or not clickable. Results may be missing total requested count. Error: {e}')
         return False
     
 # Performs the search
@@ -99,8 +106,8 @@ def perform_search(driver, search_term=None):
         logger.info(f'Search term "{search_term}" entered successfully')
         # Return for enter (2 btnK names, 2 different data-veds ), opted for safer text return.
         text_box.send_keys(Keys.RETURN)
-        print('Search submitted using Enter key')
-        logger.info('Search submitted using Enter key')
+        print('Search submitted using RETURN key')
+        logger.info('Search submitted using RETURN key')
         
     except TimeoutException:
         print("Search box not found - Google page structure may have changed")
@@ -113,68 +120,65 @@ def perform_search(driver, search_term=None):
 
     return True
 
-def extract_search_results(driver, max_results, results_accum=None):
+def extract_search_results(driver, max_results, results_accum=None, current_page_number = 1):
     # Max_results we want from user input
     max_results = max_results or 5
-    # 
+    # Hold all results
     results_accum = results_accum or []
 
-    # Try to find results, can be found possibly in #search too, but #rso apparently more consistent from research 
+    # Try to find results, can be found in #search too, but #rso more consistent from research 
     try:
-        logger.info('Looking for search results...')
-        print("Extracting search result titles...")
-        print("-" * 50)
+        logger.info(f'Page [{current_page_number}] | Looking for search results...')
+        print(f"\nPage [{current_page_number}] | Looking for search results...")
 
         # Wait for search results to load
-        # Class used for search results > h3 w/ class just in case
-        # "#rso .MjjYud h3.LC20lb" decent, but still returns some results I dont want
-        # "#rso .MjjYud h3.LC20lb.MBeuO.DKV0Md" # Not valid, worked on openai not as much on petsmart
-        # "#rso a > h3.LC20lb"
         title_elements = WebDriverWait(driver, 15).until(
             EC.presence_of_all_elements_located(
                 (By.CSS_SELECTOR, "#rso a > h3")
             )
         )
 
-        print(f'Found {len(title_elements)} search result titles')
-        logger.info(f'Found {len(title_elements)} search result titles')
+        print(f'Page [{current_page_number}] | Found {len(title_elements)} search result titles\n')
+        print("-" * 50)
+        
+        logger.info(f'Page [{current_page_number}] | Found {len(title_elements)} search result titles')
     
     except TimeoutException:
-        print("Search results not found within timeout - page may not have loaded properly")
-        logger.error('Search results not found within timeout - page may not have loaded properly')
+        print(f"Page [{current_page_number}] | Search results not found within timeout - page may not have loaded properly")
+        logger.error(f'Page [{current_page_number}] | Search results not found within timeout - page may not have loaded properly')
         # return False
         return results_accum, 0
     except Exception as e:
-        print(f"Error finding search results: {e}")
-        logger.error(f"Error finding search results: {e}")
+        print(f"Page [{current_page_number}] | Error finding search results: {e}")
+        logger.error(f"Page [{current_page_number}] | Error finding search results: {e}")
         # return False
         return results_accum, 0
 
-    # Extract results
+    # Extract results, return # extracted to main
     successful_results = 0
-    # search_results = []
-    
-    # Process results until we hit desired #
+
+    # Process results until we've cleared all results on this page
     for i, title_element in enumerate(title_elements):
+        # stop all processing after we've reached max results requested
         if successful_results >= max_results:
-            logger.info(f'Finished retrieving {max_results} search results.')
+            logger.info(f'Finished retrieving last {max_results} search results on page {current_page_number}.')
             break
         # Try not to break anything as we get text & URL
         try:
             # Get the title text
             title_text = title_element.get_attribute("textContent")
-            print(f'What is the title_text: {title_text}')
+            print(f'Page [{current_page_number}]')
 
             # Check if element is actually displayed 
             if not title_element.is_displayed():
-                print(f"Skipping non-visible result: {title_text} at result {i + 1}")
+                print(f"Page [{current_page_number}] | Skipping non-visible result: {title_text} at result {i + 1}")
                 print("-" * 50)
-
-                logger.info(f"Result {i + 1}. SKIPPING {title_text} | Element not displayed OR visible")
+                logger.info(f"Page [{current_page_number}] | Result {i + 1}. SKIPPING {title_text} | Element not displayed OR visible")
                 continue
 
-
-            # Get the parent link element to extract URL, traverse back up in XPATH
+            
+            # Get ancestor element to extract URL, traverse back up in XPATH
+            # No need to wait or anything, we already have element through title_element
             link_element = title_element.find_element(By.XPATH, "./ancestor::a")
             link_url = link_element.get_attribute("href")
 
@@ -182,76 +186,63 @@ def extract_search_results(driver, max_results, results_accum=None):
                 # Store for cleaner logs
                 results_accum.append({
                 "title": title_text,
-                "url": link_url
+                "url": link_url if link_url is not None else "No Url Found"
             })
+                # Increment return result
                 successful_results += 1
-                print(f"Result {i + 1}: {title_text}")
-                print(f"URL: {link_url}")
+                print(f"Result {i + 1} Title: {title_text}")
+                print(f"Result {i + 1} URL: {link_url}")
                 print("-" * 50)
-                logger.info(f"Result {i + 1}: {title_text} | URL: {link_url}")
+                logger.info(f"Page [{current_page_number}] | Result {i + 1}: {title_text} | URL: {link_url}")
             else:
-                print(f"Empty title found at position {i + 1}")
+                print(f"Page [{current_page_number}] | Empty title found at position {i + 1}")
                 print("-" * 50)
-                logger.warning(f"Empty title found at position {i + 1}")
+                logger.warning(f"Page [{current_page_number}] | Empty title found at position {i + 1}")
                 
         except NoSuchElementException:
-            print(f"Could not find link for result {i + 1} - skipping")
+            print(f"Page [{current_page_number}] | Could not find link for result {i + 1} - skipping")
             print("-" * 50)
+            logger.warning(f"Page [{current_page_number}] | Could not find link for result {i + 1} - skipping")
+            
 
-            logger.warning(f"Could not find link for result {i + 1}")
         except Exception as e:
-            print(f"Error processing result {i + 1}: {e}")
-            logger.warning(f"Error processing result {i + 1}: {e}")
-
-    # If we manage to extract results > 0 < requested result 
-    # if successful_results > 0:
-    #     print("\nSearch Results Summary:")
-    #     logger.info("Search Results Summary:")
-    #     for i, result in enumerate(search_results, start=1):
-    #         print(f"{i}. {result['title']}\n   {result['url']}")
-    #         logger.info(f"{i}. {result['title']} | {result['url']}")
-
-    #     print(f"Successfully extracted {successful_results} search results out of {len(title_elements)}\n")
-    #     logger.info(f"Successfully extracted {successful_results} search results out of {len(title_elements)}")
-    #     return True
-    # else:
-    #     print("No valid search results found")
-    #     logger.error("No valid search results found")
-    #     return False
+            print(f"Page [{current_page_number}] | Error processing result {i + 1}: {e}")
+            logger.warning(f"Page [{current_page_number}] | Error processing result {i + 1}: {e}")
     
     return results_accum, successful_results
 
 def main():
     # Flags & Parameters
-    driver, search_term, result_count, fresh_log = None, None, None, False
+    driver, search_term, result_count, fresh_log = None, "OpenAi", 5, False
     
     # Optional CLI args for better experience
     args = get_cli_args()
     # config = vars(args)  #  dict instead of Namespace
     # print(config)
+    today = datetime.now()
+    date_time_str = today.strftime("%Y-%m-%d %H:%M:%S")
 
-    # Argument to clear log file
+    # Argument to clear log file, 'create entry' or new log
     if args.clean:
         fresh_log = True
         print("Clearing logs...")
-
-        today = datetime.now()
-        date_time_str = today.strftime("%Y-%m-%d %H:%M:%S")
-
         # print('DateTime String:', date_time_str)
         clear_log_file()
-        logger.info(f"Log created: {date_time_str}")
+        logger.info(f"NEW Log created: {date_time_str}")
+    else:
+        logger.info(f"Log ENTRY created at: {date_time_str}")
+
 
     # Retrieve user search term
     if args.search:
-        print(f"Searching for: {args.search}")
+        #print(f"Searching for: {args.search}")
         search_term = args.search
 
     # Retrieve user result count
     if args.result_count:
-        print(f"Retrieving {args.result_count} results")
+        # print(f"Retrieving {args.result_count} results")
         result_count = args.result_count
-
+    
     try:
         # Log user flags if they were ran
         # logger.info(f"User entered query: {search_term}\nRequested {result_count} results.\nIs this a fresh log: {fresh_log}")
@@ -261,8 +252,12 @@ def main():
             ├─ Result Count:   {result_count}
             └─ Fresh Log:      {fresh_log}"""
         )
-
-        print(f"User entered query: {search_term}\nRequested {result_count} results.\nIs this a fresh log: {fresh_log}")
+        print(
+            f"""User Search Request:
+            ├─ Query:          {search_term}
+            ├─ Result Count:   {result_count}
+            └─ Fresh Log:      {fresh_log}"""
+        )
 
         print("Beginning Automated Google Search with Selenium")
         logger.info("Beginning Automated Google Search with Selenium")
@@ -272,36 +267,52 @@ def main():
         
         # Perform search w/ driver
         if not perform_search(driver, search_term):
+            # Fail if we dont arrive on search page
             exit_program_fail()
-        
-        # Extract results
-        # if not extract_search_results(driver, result_count):
-        #     exit_program_fail()
 
         # Hold all results and success count of retrieved titles
         all_results = []
         successful_results = 0
+        # Start on first page
+        pages_processed = 1
+
+        logger.info(" ### Successfully reached search page, now beginning title extraction ### ")
 
         # Loop until we have the desired result amount 
         while successful_results < result_count:
+            print(f"Processing PAGE [{pages_processed}].")
+            logger.info(f"Processing PAGE [{pages_processed}].")
+
+            # Amount left to get
             needed = result_count - successful_results
-            all_results, count_results_extracted = extract_search_results(driver, max_results=needed, results_accum=all_results)
+            # Call search method
+            all_results, count_results_extracted = extract_search_results(driver, max_results=needed, results_accum=all_results, current_page_number=pages_processed)
+            # add successes
             successful_results += count_results_extracted
-
+            
+            # Finish if met result request count
             if successful_results >= result_count:
+                print(f"Process COMPLETE collected: {successful_results}/{result_count} results.")
+                logger.info(f"Process COMPLETE collected {successful_results}/{result_count} results.")
                 break
+            else:
+                print(f"Page [{pages_processed}] | Processed and collected {successful_results}/{result_count}. Going to next page...")
+                logger.info(f"Page [{pages_processed}] | Processed and collected {successful_results}/{result_count}. Going to next page...")
+                pages_processed +=1
 
-            print(f"Collected {successful_results}/{result_count}. Going to next page...")
+            
             if not go_to_next_page(driver):
                 print("Next page not available. Ending search.")
                 break
 
         print("\nSearch Results Summary:")
-        for i, result in enumerate(all_results, start=1):
-            print(f"{i}. {result['title']}\n   {result['url']}")
-    
+        logger.info("Search Results Summary:")
 
-            
+        for i, result in enumerate(all_results, start=1):
+            print(f"{i}. Title: {result['title']} | Url: {result['url']}")
+            logger.info(f"{i}. Title: {result['title']} | Url: {result['url']}")
+
+    
         exit_program_success()
 
     except Exception as e:
